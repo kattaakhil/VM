@@ -1,0 +1,125 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmname": {
+            "type": "string",
+            "minLength":2,
+            "maxLength":10,
+            "defaultValue": "TestVm"
+        },
+        "vmsize": {
+            "type": "string",
+            "defaultValue": "Standard_B1s"
+        },
+        "adminpassword": {
+            "type": "securestring",
+            "defaultValue": "Pass@123"
+        },
+        "adminusername": {
+            "type": "string",
+            "defaultValue": "RootUser"
+        },
+        "OSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ]
+    }
+    },
+    "functions": [],
+    "variables": {
+        "vnetid":"[resourceId('enmaxtraning', 'Microsoft.Network/virtualNetworks', 'TestVnet')]",
+        "subnetid":"[concat(variables('vnetid'), '/subnets/', 'subforvm')]",
+       // "publicipid":"[resourceId('enmaxtraning','Microsoft.Network/publicIpAddresses','VMIPAddress')]",
+        "nsgid": "[resourceId('enmaxtraning', 'Microsoft.Network/networkSecurityGroups', 'TestNSG')]"
+
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-12-01",
+            "location": "East US",
+            "name":"[parameters('vmname')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', 'VmNic')]"
+            ],
+
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmsize')]"
+                },
+                "osProfile": {
+                    "computerName": "Vm01",
+                    "adminPassword":"[parameters('adminpassword')]",
+                    "adminUsername": "[parameters('adminusername')]"  
+                },
+                "networkProfile":{
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', 'VmNic')]"
+                        }
+                    ]
+                },
+                 "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "[parameters('OSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                  "storageAccountType": "Standard_LRS"
+              }
+          }
+            }
+            }
+         },
+        {
+            "name": "VMIPAddress",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic" 
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location":"[resourceGroup().location]",
+            "name":"VmNic",
+            "properties":{
+                "networkSecurityGroup": {
+                    "id" : "[variables('nsgid')]"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', 'VMIPAddress')]"
+                            },
+                            "privateIPAddressVersion": "IPv4",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet":{
+                                "id": "[variables('subnetid')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

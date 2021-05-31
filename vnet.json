@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "vnetname": {
+        "type": "string",
+        "minLength":4,
+        "maxLength":20,
+        "defaultValue": "TestVnet"
+      },
+      "subnet1": {
+        "type": "string",
+        "minLength":4,
+        "maxLength":20,
+        "defaultValue": "subforvm"
+      },
+      "subnet2": {
+        "type": "string",
+        "minLength":4,
+        "maxLength":20,
+        "defaultValue": "subnetfordb"
+      }
+    },
+    "functions": [],
+    "variables": {
+      "nsgid": "[resourceId('enmaxtraning', 'Microsoft.Network/networkSecurityGroups', 'TestNSG')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location":"[resourceGroup().location]",
+            "name":"[parameters('vnetname')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes":["220.18.0.0/16"]
+                }
+            },
+            "resources": [
+              {
+                "type": "subnets",
+                "apiVersion": "2020-11-01",
+                "name": "[parameters('subnet1')]",
+                "properties": {
+                  "addressPrefix": "220.18.0.0/23",
+                  "networkSecurityGroup": {
+                    "id": "[variables('nsgid')]"
+                  }   
+                },
+                "dependsOn": [
+                  "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetname'))]"
+                ]
+              },
+              {
+                "type": "subnets",
+                "apiVersion": "2020-11-01",
+                "name": "[parameters('subnet2')]",
+                "properties": {
+                  "addressPrefix": "220.18.2.0/23"                  },
+                "dependsOn": [
+                  "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetname'))]",
+                  "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetname'), parameters('subnet1'))]"
+                ]
+              }
+            ]
+        }
+    ],
+    "outputs": {}
+}
